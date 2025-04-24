@@ -1,0 +1,11 @@
+/images
+  /logo
+    - logo-light.png
+    - logo-dark.png
+  /icons
+    - favicon.ico
+    - logo192.png
+    - logo512.png
+  /backgrounds
+    - login-bg.jpg
+    - pattern.svg 

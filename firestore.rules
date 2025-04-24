@@ -1,0 +1,162 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function hasRole(role) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isManager(employeeId) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/employees/$(employeeId)).data.managerId == request.auth.uid;
+    }
+
+    function isHR() {
+      return hasRole('hr');
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || isOwner(userId);
+      allow delete: if isAdmin();
+    }
+
+    // Departments collection
+    match /departments/{departmentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isHR();
+    }
+
+    // Employment Types collection
+    match /employmentTypes/{typeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isHR();
+    }
+
+    // Leave Types collection
+    match /leaveTypes/{typeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isHR();
+    }
+
+    // Document Categories collection
+    match /documentCategories/{categoryId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isHR();
+    }
+
+    // Roles collection
+    match /roles/{roleId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Permissions collection
+    match /permissions/{permissionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Settings collection
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isHR();
+    }
+
+    // Employees collection
+    match /employees/{employeeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || isHR();
+      allow update: if isAdmin() || isHR() || isManager(employeeId) || isOwner(employeeId);
+      allow delete: if isAdmin() || isHR();
+    }
+
+    // Payroll collection
+    match /payroll/{payrollId} {
+      allow read: if isAdmin() || isHR() || 
+        resource.data.employeeId == request.auth.uid ||
+        isManager(resource.data.employeeId);
+      allow create, update: if isAdmin() || isHR();
+      allow delete: if isAdmin();
+    }
+
+    // Leaves collection
+    match /leaves/{leaveId} {
+      allow read: if isAdmin() || isHR() || 
+        resource.data.employeeId == request.auth.uid ||
+        isManager(resource.data.employeeId);
+      allow create: if isAuthenticated();
+      allow update: if isAdmin() || isHR() || 
+        (resource.data.employeeId == request.auth.uid && resource.data.status == 'pending') ||
+        isManager(resource.data.employeeId);
+      allow delete: if isAdmin() || 
+        (resource.data.employeeId == request.auth.uid && resource.data.status == 'pending');
+    }
+
+    // Leave Balances collection
+    match /leaveBalances/{balanceId} {
+      allow read: if isAdmin() || isHR() || 
+        resource.data.employeeId == request.auth.uid ||
+        isManager(resource.data.employeeId);
+      allow write: if isAdmin() || isHR();
+    }
+
+    // Benefits collection
+    match /benefits/{benefitId} {
+      allow read: if isAdmin() || isHR() || 
+        resource.data.employeeId == request.auth.uid ||
+        isManager(resource.data.employeeId);
+      allow write: if isAdmin() || isHR();
+    }
+
+    // Attendance collection
+    match /attendance/{attendanceId} {
+      allow read: if isAdmin() || isHR() || 
+        resource.data.employeeId == request.auth.uid ||
+        isManager(resource.data.employeeId);
+      allow create: if isAuthenticated();
+      allow update: if isAdmin() || isHR() || 
+        resource.data.employeeId == request.auth.uid ||
+        isManager(resource.data.employeeId);
+      allow delete: if isAdmin() || isHR();
+    }
+
+    // Performance collection
+    match /performance/{performanceId} {
+      allow read: if isAdmin() || isHR() || 
+        resource.data.employeeId == request.auth.uid ||
+        isManager(resource.data.employeeId);
+      allow create, update: if isAdmin() || isHR() || isManager(resource.data.employeeId);
+      allow delete: if isAdmin() || isHR();
+    }
+
+    // Documents collection
+    match /documents/{documentId} {
+      allow read: if isAdmin() || isHR() || 
+        resource.data.employeeId == request.auth.uid ||
+        isManager(resource.data.employeeId);
+      allow create: if isAuthenticated();
+      allow update: if isAdmin() || isHR() || 
+        resource.data.employeeId == request.auth.uid ||
+        isManager(resource.data.employeeId);
+      allow delete: if isAdmin() || isHR() || 
+        (resource.data.employeeId == request.auth.uid && resource.data.type == 'personal');
+    }
+  }
+} 
